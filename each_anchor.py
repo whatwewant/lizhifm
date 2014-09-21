@@ -3,7 +3,11 @@
 
 import requests
 import json
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 class Anchor(object):
     '''每个主播的节目'''
@@ -74,7 +78,7 @@ class Anchor(object):
             fp.write(file_source)
             
     def download_mp3(self, fm_id):
-        import time
+        import time, os
         self.resolve_anchor_info_json(self.get_anchor_info_json(fm_id))
         self.create_anchor_main_dir()
 
@@ -82,6 +86,9 @@ class Anchor(object):
         length = 20
         for i in range(5):
             for ep3 in self.resolve_audios_json(self.get_audios_json(fm_id, start, length)):
+                if os.path.isfile(self.__final_path + '/' + ep3['name'] + '.mp3'):
+                    print ep3['name'] + '.mp3 已经存在' 
+                    continue
                 print "Downloading " + ep3['name'] + '.mp3'
                 self.store_mp3(ep3['name'], 'mp3', self.__req.get(ep3['url']).content)
                 time.sleep(5)
