@@ -74,7 +74,7 @@ class Anchor(object):
 
     def store_mp3(self, file_name, file_format, file_source):
         final_file = self.__final_path + '/' + file_name + '.' + file_format
-        with open(final_file, "w") as fp:
+        with open(final_file, 'wb') as fp:
             fp.write(file_source)
             
     def download_mp3(self, fm_id):
@@ -86,11 +86,14 @@ class Anchor(object):
         length = 20
         for i in range(5):
             for ep3 in self.resolve_audios_json(self.get_audios_json(fm_id, start, length)):
-                if os.path.isfile(self.__final_path + '/' + ep3['name'] + '.mp3'):
-                    print ep3['name'] + '.mp3 已经存在' 
+                c = time.localtime(ep3['create_time']/1000)
+                create_time = str(c.tm_year) + str(c.tm_mon) + str(c.tm_mday) + '-'
+                name = ep3['name'].replace('/', '+').replace(' ', '')
+                if os.path.isfile(self.__final_path + '/' + create_time + name+ '.mp3'):
+                    print name + '.mp3 已经存在' 
                     continue
-                print "Downloading " + ep3['name'] + '.mp3'
-                self.store_mp3(ep3['name'], 'mp3', self.__req.get(ep3['url']).content)
+                print "Downloading " + create_time + name + '.mp3'
+                self.store_mp3(create_time + name, 'mp3', self.__req.get(ep3['url']).content)
                 time.sleep(5)
             start += length
             length += 20
