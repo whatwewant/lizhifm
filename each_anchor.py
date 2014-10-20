@@ -72,10 +72,25 @@ class Anchor(object):
             self.__total_audios_list.append(ep3_dict)
         return each_page
 
-    def store_mp3(self, file_name, file_format, file_source):
+    def store_mp3(self, file_name, file_format, url):
         final_file = self.__final_path + '/' + file_name + '.' + file_format
+        file_size = int(requests.head(url).headers.get('Content-Length'))
+        file_size = 1 if not file_size else file_size
         with open(final_file, 'wb') as fp:
-            fp.write(file_source)
+            response = requests.get(url, stream=True)
+            if not response.ok:
+                print("Requests Status Error.")
+                return 
+            file_size_dl = 0
+            for block in response.iter_content(1024):
+                if not block:
+                    break
+                fp.write(block)
+                file_size_dl += len(block)
+                status = r"%.2f MB  [%3.2f%%]" % (file_size_dl/float(1024*1024), file_size_dl * 100 / float(file_size))
+                sys.stdout.write(status + '\r')
+                sys.stdout.flush()
+
             
     def download_mp3(self, fm_id):
         import time, os
@@ -93,7 +108,7 @@ class Anchor(object):
                     print name + '.mp3 已经存在' 
                     continue
                 print "Downloading " + create_time + name + '.mp3'
-                self.store_mp3(create_time + name, 'mp3', self.__req.get(ep3['url']).content)
+                self.store_mp3(create_time + name, 'mp3', ep3['url'])
                 time.sleep(5)
             start += length
             length += 20
