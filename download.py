@@ -42,12 +42,12 @@ class Download:
         self.set_file_path_and_name(file_name, file_path)
         self.set_server_response_header()
         self.set_accept_range()
-        self.set_open_file_mode()
         self.set_content_length()
         self.set_file_size_unit()
-        self.set_file_name_exists
+        self.set_file_name_exists()
         self.set_tmp_file_name_exists()
         self.set_tmp_file_name_size()
+        self.set_open_file_mode()
         self.set_range_headers()
         self.set_requests_stream_object()
         self.set_file_modified()
@@ -58,7 +58,8 @@ class Download:
 
     def set_server_response_header(self):
         assert self.__url
-        self.__server_response_headers = requests.head(self.__url).headers
+        self.__server_response_headers = requests.head(self.__url, \
+                                headers={'Range': 'bytes=0-'}).headers
 
     def set_accept_range(self):
         assert self.__server_response_headers
@@ -67,7 +68,7 @@ class Download:
 
     def set_open_file_mode(self):
         if self.__accept_range:
-            self.__open_file_mode = 'ap'
+            self.__open_file_mode = 'ab'
 
     def set_file_path_and_name(self, file_name, file_path=None):
         assert file_name
@@ -151,7 +152,7 @@ class Download:
             self.__tmp_file_name_size = os.path.getsize(path)
 
     def set_range_headers(self):
-        if self.__tmp_file_name_size > 0:
+        if self.__tmp_file_name_size >= 0:
             self.__range_headers = {'Range': 'bytes=%d-' % self.__tmp_file_name_size}
 
     def delete_file(self, file_path, file_name):
@@ -189,7 +190,7 @@ class Download:
 
         return '%s:%s:%s' % (hour, minute, second)
 
-    def print_status(self, already_download_size, start_second, id=None):
+    def print_status(self, already_download_size, start_second, id=0):
         assert already_download_size
         assert self.__content_length
         id = 0 if not id else id
@@ -199,13 +200,21 @@ class Download:
         if time_segment <= 0:
             return
 
-        download_speed = already_download_size / float(time_segment)
+        download_speed = (already_download_size - \
+                          self.__tmp_file_name_size)/ float(time_segment)
         left_time = (self.__content_length - already_download_size) / float(download_speed)
         left_time_str = self.calculate_time(left_time)
 
         (already_download, already_download_unit) = self.tranform_file_size_and_unit(already_download_size)
         (speed, speed_unit) = self.tranform_file_size_and_unit(download_speed)
         percent = self.calculate_percent(already_download_size, self.__content_length)
+
+        if percent > 100:
+            assert self.__url
+            assert self.__file_name
+            assert self.__file_path
+            self.delete_file(self.__file_path, self.__tmp_file_name)
+            self.download(self.__url, self.__file_name, self.__file_path, id)
 
         # ID:1 File: Hear.h [ 12.3MB ] [ 27% ] [ Speed: 123kb/s Left Time: 00:00:00]
         #status = 'ID:%d File: %s [ %.2f %s ] [ %3.2f%% ] [ Speed: %.2f %s left Time: %f ]' % \
@@ -214,12 +223,12 @@ class Download:
                     (already_download, already_download_unit, percent, speed, speed_unit, left_time_str)
 
         # status = status + chr(8)*(len(status)+1)
-        sys.stdout.write('\r' + status + ' \b      ')
+        sys.stdout.write(status + ' \b      \r')
         # sys.stdout.write(status + '\r')
         sys.stdout.flush()
         
 
-    def download(self, url, file_name, file_path=None, id=None):
+    def download(self, url, file_name, file_path=None, id=0):
         '''
             download main
         ''' 
@@ -237,10 +246,15 @@ class Download:
             print('Requests Error')
             return
 
-        print('ID:%d File: %s' % (id, self.__file_name))
+        (all_size, all_size_unit) = \
+                self.tranform_file_size_and_unit(self.__content_length)
+        print('ID:%d File: %s [ %.2f %s ] \b                   ' % \
+              (id, self.__file_name, all_size, all_size_unit))
 
         tf = ''
         file_size_dl = 0
+        if self.__tmp_file_name_size:
+            file_size_dl = self.__tmp_file_name_size
         try:
             tf = open(self.__tmp_file_final, self.__open_file_mode)
             response = self.__requests_stream_object
