@@ -71,10 +71,10 @@ class Download:
 
     def set_file_path_and_name(self, file_name, file_path=None):
         assert file_name
-        self.__file_name = file_name
-        self.__tmp_file_name = file_name + '.tmp'
+        self.__file_name = str(file_name)
+        self.__tmp_file_name = str(file_name) + '.tmp'
         if file_path:
-            self.__file_path = file_path
+            self.__file_path = str(file_path)
         self.__file_final = os.path.join(self.__file_path, self.__file_name)
         self.__tmp_file_final = os.path.join(self.__file_path, self.__tmp_file_name)
 
@@ -145,7 +145,7 @@ class Download:
         else:
             return 0
 
-    def set_tmp_file_size(self):
+    def set_tmp_file_name_size(self):
         if self.__tmp_file_name_exists:
             path = os.path.join(self.__file_path, self.__tmp_file_name)
             self.__tmp_file_name_size = os.path.getsize(path)
@@ -164,7 +164,7 @@ class Download:
 
     def set_file_modified(self):
         assert self.__content_length
-        if self.file_name_exists():
+        if self.__file_name_exists:
             local_file_size = self.get_file_name_size()
             if self.__content_length != local_file_size:
                 print('File %s Modified' % self.__file_name)
@@ -176,12 +176,23 @@ class Download:
 
     def calculate_percent(self, part, all):
         assert all
-        return part / float(all)
+        return part * 100/ float(all)
+
+    def calculate_time(self, left_time):
+        left_time = int(left_time)
+        second = left_time % 60
+        second = '0' + str(second) if second < 10 else str(second)
+        minute = left_time / 60 % 60
+        minute = '0' + str(minute) if minute < 10 else str(minute)
+        hour = left_time / 3600
+        hour = '0' + str(hour) if hour < 10 else str(hour)
+
+        return '%s:%s:%s' % (hour, minute, second)
 
     def print_status(self, already_download_size, start_second, id=None):
         assert already_download_size
         assert self.__content_length
-        id = ' ' if not id else id
+        id = 0 if not id else id
 
         end_second = int(time.time())
         time_segment = end_second - start_second
@@ -190,17 +201,21 @@ class Download:
 
         download_speed = already_download_size / float(time_segment)
         left_time = (self.__content_length - already_download_size) / float(download_speed)
+        left_time_str = self.calculate_time(left_time)
 
         (already_download, already_download_unit) = self.tranform_file_size_and_unit(already_download_size)
         (speed, speed_unit) = self.tranform_file_size_and_unit(download_speed)
-        percent = self.calculate_percent(already_download, self.__content_length)
+        percent = self.calculate_percent(already_download_size, self.__content_length)
 
         # ID:1 File: Hear.h [ 12.3MB ] [ 27% ] [ Speed: 123kb/s Left Time: 00:00:00]
-        status = 'ID:%d File: %s [ %.2f %s ] [ %3.2%% ] [Speed: %.2f %s left Time: %s]' % \
-                    (id, self.__file_name, already_download, already_download_unit, percent, 
-                    speed, speed_unit, left_time)
+        #status = 'ID:%d File: %s [ %.2f %s ] [ %3.2f%% ] [ Speed: %.2f %s left Time: %f ]' % \
+        #            (id, self.__file_name, already_download, already_download_unit, percent, speed, speed_unit, left_time)
+        status = '%03.2f%s [%03.2f%%] [Speed:%03.2f%s/s Timeleft:%s]' % \
+                    (already_download, already_download_unit, percent, speed, speed_unit, left_time_str)
 
-        sys.stdout.write(status + '\r')
+        # status = status + chr(8)*(len(status)+1)
+        sys.stdout.write('\r' + status + ' \b      ')
+        # sys.stdout.write(status + '\r')
         sys.stdout.flush()
         
 
@@ -217,6 +232,12 @@ class Download:
         assert self.__file_name
         assert self.__file_final
         assert self.__open_file_mode
+        
+        if not self.__requests_stream_object.ok:
+            print('Requests Error')
+            return
+
+        print('ID:%d File: %s' % (id, self.__file_name))
 
         tf = ''
         file_size_dl = 0
@@ -232,6 +253,7 @@ class Download:
                     break
                 tf.write(block)
                 file_size_dl += len(block)
+                # if int(time.time() - start_second) % 2 == 0:
                 self.print_status(file_size_dl, start_second, id)
             tf.close()
         except :
