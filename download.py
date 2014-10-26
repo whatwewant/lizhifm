@@ -80,7 +80,8 @@ class Download:
 
     def set_accept_range(self):
         assert self.__server_response_headers
-        if self.__server_response_headers.get('Accept-Range'):
+        if self.__server_response_headers.get('Accept-Ranges') or \
+           self.__server_response_headers.get('Accept-Range'):
             self.__accept_range = True
 
     def set_open_file_mode(self):
