@@ -5,6 +5,7 @@ import sys
 import requests
 import os
 import time
+import traceback
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -29,6 +30,7 @@ class Download:
         self.__file_size = 0
 
         self.__file_name_exists = False # 8
+        self.__file_already_download = False
         self.__tmp_file_name_exists = False # 9
         self.__tmp_file_name_size = 0 # 10
         self.__range_headers = None # 11
@@ -86,11 +88,26 @@ class Download:
         if file_path:
             self.__file_path = str(file_path)
         self.__file_final = os.path.join(self.__file_path, self.__file_name)
-        self.__tmp_file_final = os.path.join(self.__file_path, self.__tmp_file_name)
+        self.__tmp_file_final = os.path.join(self.__file_path, 
+                                             self.__tmp_file_name)
 
     def set_file_name_exists(self):
         path = os.path.join(self.__file_path, self.__file_name)
         self.__file_name_exists = os.path.exists(path)
+        if self.__file_name_exists:
+            print('File %s Exists;' % self.__file_name)
+       # print path
+       # print self.__file_name_exists
+       # if self.__file_name_exists:
+       #     try:
+       #         if self.__content_length == os.path.getsize(path):
+       #             print('File %s Exists: length: %d byte' % 
+       #                   (self.__file_name, os.path.getsize(path)))
+       #     except OSError:
+       #         traceback.print_exc()
+       #         with open(self.__logfile_path, 'a') as log:
+       #             log.write('OSError' + '\n')
+       #         raise
 
     def set_tmp_file_name_exists(self):
         assert self.__file_path
@@ -183,6 +200,10 @@ class Download:
                 print('File %s Modified' % self.__file_name)
                 self.delete_file(self.__file_path, self.__file_name)
                 self.__file_modified = True
+            else:
+                print('File %s Already Download; Length: %d' %
+                     (self.__file_name, self.get_file_name_size()))
+                self.__file_already_download = True
 
     def rename_old_to_new(self, old, new):
         os.rename(old, new)
@@ -254,6 +275,9 @@ class Download:
                         self.__logfile), 'a') as log:
                 log.write('Error Download: ' +
                          self.__url + '\n')
+            return (0, 0)
+
+        if self.__file_already_download:
             return (0, 0)
 
         assert self.__server_response_headers
