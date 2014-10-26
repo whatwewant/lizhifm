@@ -33,7 +33,16 @@ class Download:
         self.__tmp_file_name_size = 0 # 10
         self.__range_headers = None # 11
         self.__requests_stream_object = None # 12
+        self.__requests_ok = False
         self.__file_modified = False # 13
+
+        self.__logdir = os.path.abspath('.') # 14
+        self.__logfile = 'client_error.log'
+        self.__logfile_path = os.path.join\
+                (self.__logdir, self.__logfile)
+
+        #if os.path.exists(self.__logfile_path):
+        #    os.remove(self.__logfile_path)
 
     def set_all_info(self, url, file_name, file_path):
         assert url
@@ -97,7 +106,8 @@ class Download:
             self.__content_length = int(length)
 
     def set_file_size_unit(self):
-        assert self.__content_length
+        # print self.__server_response_headers
+        # assert self.__content_length
         if self.__content_length > 1024 * 1024 * 1024:
             self.__file_size_unit = 'GB'
             self.__file_size = self.__content_length / float(1024*1024*1024)
@@ -127,10 +137,12 @@ class Download:
         if not self.__accept_range:
             self.__requests_stream_object = requests.get(self.__url, 
                         stream=True)
+            self.__requests_ok = self.__requests_stream_object.ok
         else:
             assert self.__range_headers
             self.__requests_stream_object = requests.get(self.__url, 
                         stream=True, headers=self.__range_headers)
+            self.__requests_ok = self.__requests_stream_object.ok
 
     def file_exists(self, file_path, file_name):
         assert file_path
@@ -164,7 +176,7 @@ class Download:
             print('File %s Doesnot Exist' % file_name)
 
     def set_file_modified(self):
-        assert self.__content_length
+        # assert self.__content_length
         if self.__file_name_exists:
             local_file_size = self.get_file_name_size()
             if self.__content_length != local_file_size:
@@ -236,6 +248,14 @@ class Download:
         assert url
         assert file_name
         self.set_all_info(url, file_name, file_path)
+
+        if not self.__requests_ok:
+            with open(os.path.join(self.__logdir, 
+                        self.__logfile), 'a') as log:
+                log.write('Error Download: ' +
+                         self.__url + '\n')
+            return (0, 0)
+
         assert self.__server_response_headers
         assert self.__requests_stream_object
         assert self.__file_name
@@ -271,9 +291,9 @@ class Download:
                 self.print_status(file_size_dl, start_second, id)
             tf.close()
         except :
+            raise
             tf.close()
             print("Something Wrong!")
-            raise
 
         self.rename_old_to_new(self.__tmp_file_final, self.__file_final)
 
