@@ -37,8 +37,9 @@ class Download:
         self.__requests_stream_object = None # 12
         self.__requests_ok = False
         self.__file_modified = False # 13
+        self.__all_file_size = 0 # 14
 
-        self.__logdir = os.path.abspath('.') # 14
+        self.__logdir = os.path.abspath('.') # 15
         self.__logfile = 'client_error.log'
         self.__logfile_path = os.path.join\
                 (self.__logdir, self.__logfile)
@@ -62,6 +63,11 @@ class Download:
         self.set_range_headers()
         self.set_requests_stream_object()
         self.set_file_modified()
+        self.set_all_file_size()
+
+    def set_all_file_size(self):
+        self.__all_file_size = self.__content_length + \
+                self.__tmp_file_name_size
 
     def set_url(self, url):
         assert url
@@ -96,6 +102,7 @@ class Download:
         self.__file_name_exists = os.path.exists(path)
         if self.__file_name_exists:
             print('File %s Exists;' % self.__file_name)
+            self.__file_already_download = True
        # print path
        # print self.__file_name_exists
        # if self.__file_name_exists:
@@ -144,7 +151,7 @@ class Download:
         elif file_size_dl > 1024 * 1024:
             unit = 'MB'
             file_size = file_size_dl / float(1024*1024)
-        elif self.__content_length > 1024:
+        elif file_size_dl > 1024:
             unit = 'KB'
             file_size = file_size_dl / float(1024)
         return (file_size, unit)
@@ -195,15 +202,18 @@ class Download:
     def set_file_modified(self):
         # assert self.__content_length
         if self.__file_name_exists:
-            local_file_size = self.get_file_name_size()
-            if self.__content_length != local_file_size:
-                print('File %s Modified' % self.__file_name)
-                self.delete_file(self.__file_path, self.__file_name)
-                self.__file_modified = True
-            else:
-                print('File %s Already Download; Length: %d' %
-                     (self.__file_name, self.get_file_name_size()))
-                self.__file_already_download = True
+           # local_file_size = self.get_file_name_size()
+           # print self.__content_length + self.__tmp_file_name_size
+           # exit(-1)
+           # if self.__content_length+self.__tmp_file_name_size \
+           # != local_file_size:
+           #     print('File %s Modified' % self.__file_name)
+           #     self.delete_file(self.__file_path, self.__file_name)
+           #     self.__file_modified = True
+           # else:
+           #     print('File %s Already Download; Length: %d' %
+           #          (self.__file_name, self.get_file_name_size()))
+            self.__file_already_download = True
 
     def rename_old_to_new(self, old, new):
         os.rename(old, new)
@@ -235,17 +245,19 @@ class Download:
 
         download_speed = (already_download_size - \
                           self.__tmp_file_name_size)/ float(time_segment)
-        left_time = (self.__content_length - already_download_size) / float(download_speed)
+        left_time = (self.__all_file_size - already_download_size) / float(download_speed)
         left_time_str = self.calculate_time(left_time)
 
         (already_download, already_download_unit) = self.tranform_file_size_and_unit(already_download_size)
         (speed, speed_unit) = self.tranform_file_size_and_unit(download_speed)
-        percent = self.calculate_percent(already_download_size, self.__content_length)
+        percent = self.calculate_percent(already_download_size, 
+                                         self.__all_file_size)
 
         if percent > 100:
             assert self.__url
             assert self.__file_name
             assert self.__file_path
+            assert self.__file_already_download
             self.delete_file(self.__file_path, self.__tmp_file_name)
             self.download(self.__url, self.__file_name, self.__file_path, id)
 
@@ -277,6 +289,8 @@ class Download:
                          self.__url + '\n')
             return (0, 0)
 
+        #print self.__file_already_download
+        #assert self.__file_already_download
         if self.__file_already_download:
             return (0, 0)
 
@@ -291,7 +305,7 @@ class Download:
             return
 
         (all_size, all_size_unit) = \
-                self.tranform_file_size_and_unit(self.__content_length)
+                self.tranform_file_size_and_unit(self.__all_file_size)
         print('ID:%d File: %s [ %.2f %s ] \b                   ' % \
               (id, self.__file_name, all_size, all_size_unit))
 
@@ -321,5 +335,5 @@ class Download:
 
         self.rename_old_to_new(self.__tmp_file_final, self.__file_final)
 
-        return (self.__content_length, file_size_dl)
+        return (self.__all_file_size, file_size_dl)
 
