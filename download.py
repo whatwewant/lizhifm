@@ -5,7 +5,7 @@ import sys
 import requests
 import os
 import time
-import traceback
+# import traceback
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -16,16 +16,19 @@ class Download:
     '''
     def __init__(self):
         self.__url = '' # 1
-        self.__file_path = '.' # 2default current dir
-        self.__file_name = ''
-        self.__file_final = ''
-        self.__tmp_file_name = '' # .tmp
-        self.__tmp_file_final = ''
+        self.__file_path = '.' # 2default current dir, file store path
+        self.__file_name = '' # file name
+        self.__file_final = '' # Absolute path for a file
+        self.__tmp_file_name = '' # file temp name, end with `.tmp`
+        self.__tmp_file_final = '' # Absolute path for a temp file
+        # write file
+        self.__real_write_file = '' # Decided by file open mode 'wb' or 'ab'
 
         self.__server_response_headers = '' # 3
         self.__accept_range = False # 4
         self.__open_file_mode = 'wb' # 5
-        self.__content_length = 0 # 6
+        self.__content_length = 0 # 6 the whole file content length
+        self.__content_length_request = 0 # the request file content length
         self.__file_size_unit = 'byte' # 7
         self.__file_size = 0
 
@@ -33,6 +36,7 @@ class Download:
         self.__file_already_download = False
         self.__tmp_file_name_exists = False # 9
         self.__tmp_file_name_size = 0 # 10
+
         self.__range_headers = None # 11
         self.__requests_stream_object = None # 12
         self.__requests_ok = False
@@ -44,30 +48,63 @@ class Download:
         self.__logfile_path = os.path.join\
                 (self.__logdir, self.__logfile)
 
-        #if os.path.exists(self.__logfile_path):
-        #    os.remove(self.__logfile_path)
+    def reset(self):
+        self.__url = '' # 1
+        self.__file_path = '.' # 2default current dir, file store path
+        self.__file_name = '' # file name
+        self.__file_final = '' # Absolute path for a file
+        self.__tmp_file_name = '' # file temp name, end with `.tmp`
+        self.__tmp_file_final = '' # Absolute path for a temp file
+        # write file
+        self.__real_write_file = '' # Decided by file open mode 'wb' or 'ab'
+
+        self.__server_response_headers = '' # 3
+        self.__accept_range = False # 4
+        self.__open_file_mode = 'wb' # 5
+        self.__content_length = 0 # 6 the whole file content length
+        self.__content_length_request = 0 # the request file content length
+        self.__file_size_unit = 'byte' # 7
+        self.__file_size = 0
+
+        self.__file_name_exists = False # 8
+        self.__file_already_download = False
+        self.__tmp_file_name_exists = False # 9
+        self.__tmp_file_name_size = 0 # 10
+
+        self.__range_headers = None # 11
+        self.__requests_stream_object = None # 12
+        self.__requests_ok = False
+        self.__file_modified = False # 13
+        self.__all_file_size = 0 # 14
+
+        self.__logdir = os.path.abspath('.') # 15
+        self.__logfile = 'client_error.log'
+        self.__logfile_path = os.path.join\
+                (self.__logdir, self.__logfile)
 
     def set_all_info(self, url, file_name, file_path):
         assert url
         assert file_name
-        self.set_url(url)
-        self.set_file_path_and_name(file_name, file_path)
-        self.set_server_response_header()
-        self.set_accept_range()
-        self.set_content_length()
-        self.set_file_size_unit()
-        self.set_file_name_exists()
-        self.set_tmp_file_name_exists()
-        self.set_tmp_file_name_size()
-        self.set_open_file_mode()
-        self.set_range_headers()
-        self.set_requests_stream_object()
-        self.set_file_modified()
-        self.set_all_file_size()
+        self.set_url(url) # 1
+        self.set_file_path_and_name(file_name, file_path) # 2
+        self.set_server_response_header() # 3
+        self.set_accept_range() # 4
+        self.set_open_file_mode() # 5
+        self.set_content_length() # 6
+        self.set_file_size_unit() # 7 
+        self.set_file_name_exists() # 8
+        self.set_tmp_file_name_exists() # 9
+        self.set_tmp_file_name_size() # 10
+        self.set_range_headers() # 11
+        self.set_requests_stream_object() # 12
+        self.set_all_file_size() # 
+        self.set_file_modified() # 13 @TODO
+
+    def isFileDownloaded(self):
+        return self.__file_already_download
 
     def set_all_file_size(self):
-        self.__all_file_size = self.__content_length + \
-                self.__tmp_file_name_size
+        self.__all_file_size = self.__content_length
 
     def set_url(self, url):
         assert url
@@ -80,13 +117,16 @@ class Download:
 
     def set_accept_range(self):
         assert self.__server_response_headers
-        if self.__server_response_headers.get('Accept-Ranges') or \
-           self.__server_response_headers.get('Accept-Range'):
+        status = self.__server_response_headers.get('Accept-Ranges')
+        if status != None:
             self.__accept_range = True
 
     def set_open_file_mode(self):
         if self.__accept_range:
             self.__open_file_mode = 'ab'
+            self.__real_write_file = self.__tmp_file_final
+        else:
+            self.__real_write_file = self.__file_final
 
     def set_file_path_and_name(self, file_name, file_path=None):
         assert file_name
@@ -99,10 +139,9 @@ class Download:
                                              self.__tmp_file_name)
 
     def set_file_name_exists(self):
-        path = os.path.join(self.__file_path, self.__file_name)
+        path = self.__file_final # os.path.join(self.__file_path, self.__file_name)
         self.__file_name_exists = os.path.exists(path)
         if self.__file_name_exists:
-            print('File %s Exists;' % self.__file_name)
             self.__file_already_download = True
        # print path
        # print self.__file_name_exists
@@ -120,9 +159,13 @@ class Download:
     def set_tmp_file_name_exists(self):
         assert self.__file_path
         assert self.__tmp_file_name
-        self.__tmp_file_name_exists =  self.file_exists( \
-            self.__file_path, self.__tmp_file_name)
+        path = self.__tmp_file_final
+        self.__tmp_file_name_exists = os.path.exists(path)
         
+    def set_tmp_file_name_size(self):
+        if self.__tmp_file_name_exists:
+            path = self.__tmp_file_final # os.path.join(self.__file_path, self.__tmp_file_name)
+            self.__tmp_file_name_size = os.path.getsize(path)
 
     def set_content_length(self):
         assert self.__server_response_headers
@@ -163,11 +206,13 @@ class Download:
             self.__requests_stream_object = requests.get(self.__url, 
                         stream=True)
             self.__requests_ok = self.__requests_stream_object.ok
+            self.__content_length_request = self.__content_length
         else:
             assert self.__range_headers
             self.__requests_stream_object = requests.get(self.__url, 
                         stream=True, headers=self.__range_headers)
             self.__requests_ok = self.__requests_stream_object.ok
+            self.__content_length_request = self.__content_length - self.__tmp_file_name_size
 
     def file_exists(self, file_path, file_name):
         assert file_path
@@ -183,26 +228,21 @@ class Download:
         else:
             return 0
 
-    def set_tmp_file_name_size(self):
-        if self.__tmp_file_name_exists:
-            path = os.path.join(self.__file_path, self.__tmp_file_name)
-            self.__tmp_file_name_size = os.path.getsize(path)
-
     def set_range_headers(self):
         if self.__tmp_file_name_size >= 0:
             self.__range_headers = {'Range': 'bytes=%d-' % self.__tmp_file_name_size}
 
-    def delete_file(self, file_path, file_name):
-        assert file_path
-        assert file_name
-        if self.file_exists(file_path, file_name):
-            os.remove(os.path.join(file_path, file_name))
+    def delete_file(self, file_absolute_path):
+        if os.path.exists(file_absolute_path):
+            os.remove(file_absolute_path)
         else:
-            print('File %s Doesnot Exist' % file_name)
+            print('File %s Doesnot Exist' % self.__file_name)
 
     def set_file_modified(self):
-        # assert self.__content_length
+        assert self.__content_length
+        assert self.__all_file_size
         if self.__file_name_exists:
+            local_file_size = os.path.getsize(self.__file_final)
            # local_file_size = self.get_file_name_size()
            # print self.__content_length + self.__tmp_file_name_size
            # exit(-1)
@@ -214,7 +254,9 @@ class Download:
            # else:
            #     print('File %s Already Download; Length: %d' %
            #          (self.__file_name, self.get_file_name_size()))
-            self.__file_already_download = True
+            if local_file_size != self.__all_file_size:
+                self.__file_modified = True
+                self.__file_already_download = False
 
     def rename_old_to_new(self, old, new):
         os.rename(old, new)
@@ -244,14 +286,13 @@ class Download:
         if time_segment <= 0:
             return
 
-        download_speed = (already_download_size - \
-                          self.__tmp_file_name_size)/ float(time_segment)
-        left_time = (self.__all_file_size - already_download_size) / float(download_speed)
+        download_speed = already_download_size / float(time_segment)
+        left_time = (self.__all_file_size - already_download_size - self.__tmp_file_name_size) / float(download_speed)
         left_time_str = self.calculate_time(left_time)
 
         (already_download, already_download_unit) = self.tranform_file_size_and_unit(already_download_size)
         (speed, speed_unit) = self.tranform_file_size_and_unit(download_speed)
-        percent = self.calculate_percent(already_download_size, 
+        percent = self.calculate_percent(already_download_size + self.__tmp_file_name_size, 
                                          self.__all_file_size)
 
         if percent > 100:
@@ -261,6 +302,9 @@ class Download:
             assert self.__file_already_download
             self.delete_file(self.__file_path, self.__tmp_file_name)
             self.download(self.__url, self.__file_name, self.__file_path, id)
+            sys.stdout.write('Error: Percent lager than 100%\n')
+            sys.stdout.flush()
+            return 101
 
         # ID:1 File: Hear.h [ 12.3MB ] [ 27% ] [ Speed: 123kb/s Left Time: 00:00:00]
         #status = 'ID:%d File: %s [ %.2f %s ] [ %3.2f%% ] [ Speed: %.2f %s left Time: %f ]' % \
@@ -281,29 +325,35 @@ class Download:
         # assert when url, file_name is None
         assert url
         assert file_name
+        self.reset()
         self.set_all_info(url, file_name, file_path)
 
+        if self.isFileDownloaded():
+            sys.stdout.write('%s already downloaded\n' % self.__file_name)
+            sys.stdout.flush()
+            return (self.__content_length, 0)
+
         if not self.__requests_ok:
+            sys.stdout.write('Error: Request Error!\n')
+            sys.stdout.flush()
             with open(os.path.join(self.__logdir, 
                         self.__logfile), 'a') as log:
                 log.write('Error Download: ' +
                          self.__url + '\n')
-            return (0, 0)
+            return (self.__content_length, 0)
+
+        if self.__file_modified:
+            sys.stdout.write('Modified: %s has been Modified\n' % self.__file_name)
+            sys.stdout.flush()
 
         #print self.__file_already_download
         #assert self.__file_already_download
-        if self.__file_already_download:
-            return (0, 0)
 
         assert self.__server_response_headers
         assert self.__requests_stream_object
         assert self.__file_name
         assert self.__file_final
         assert self.__open_file_mode
-        
-        if not self.__requests_stream_object.ok:
-            print('Requests Error')
-            return
 
         (all_size, all_size_unit) = \
                 self.tranform_file_size_and_unit(self.__all_file_size)
@@ -312,15 +362,13 @@ class Download:
 
         tf = ''
         file_size_dl = 0
-        if self.__tmp_file_name_size:
+        if self.__accept_range and self.__tmp_file_name_size:
             file_size_dl = self.__tmp_file_name_size
         try:
             tf = open(self.__tmp_file_final, self.__open_file_mode)
             response = self.__requests_stream_object
-            if not response.ok:
-                print('Requests Status Error.')
-                return
             start_second = int(time.time())
+
             for block in response.iter_content(8192):
                 if not block:
                     break
