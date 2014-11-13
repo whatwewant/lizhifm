@@ -103,11 +103,11 @@ class Anchor(object):
         for i in range(5):
             for ep3 in self.resolve_audios_json(self.get_audios_json(fm_id, start, length)):
                 c = time.localtime(ep3['create_time']/1000)
-                create_time = str(c.tm_year) + str(c.tm_mon) + str(c.tm_mday) + '-'
+                create_time = '%02d%02d%02d%s' % (c.tm_year, c.tm_mon, c.tm_mday, '-')
                 name = ep3['name'].replace('/', '+').replace(' ', '')
-                if os.path.isfile(self.__final_path + '/' + create_time + name+ '.mp3'):
-                    print name + '.mp3 已经存在' 
-                    continue
+                #if os.path.isfile(self.__final_path + '/' + create_time + name+ '.mp3'):
+                    #print name + '.mp3 已经存在' 
+                    #continue
                 # print "Downloading " + create_time + name + '.mp3'
                 # self.store_mp3(create_time + name, 'mp3', ep3['url'])
                 download = Download()

@@ -68,6 +68,7 @@ class Download:
 
         self.__file_name_exists = False # 8
         self.__file_already_download = False
+        # if not accept range, we don't need tmp_file
         self.__tmp_file_name_exists = False # 9
         self.__tmp_file_name_size = 0 # 10
 
@@ -116,10 +117,16 @@ class Download:
                                 headers={'Range': 'bytes=0-'}).headers
 
     def set_accept_range(self):
+        assert self.__url
         assert self.__server_response_headers
         status = self.__server_response_headers.get('Accept-Ranges')
+        status_length = self.__server_response_headers.get('Content-Length')
         if status != None:
             self.__accept_range = True
+            do_range = requests.head(self.__url, headers={'Range': 'bytes=2-'})
+            do_range_length = do_range.headers.get('Content-Length')
+            if status_length == do_range_length:
+                self.__accept_range = False
 
     def set_open_file_mode(self):
         if self.__accept_range:
@@ -159,10 +166,17 @@ class Download:
     def set_tmp_file_name_exists(self):
         assert self.__file_path
         assert self.__tmp_file_name
+
+        if not self.__accept_range:
+            return
+
         path = self.__tmp_file_final
         self.__tmp_file_name_exists = os.path.exists(path)
         
     def set_tmp_file_name_size(self):
+        if not self.__accept_range:
+            return
+
         if self.__tmp_file_name_exists:
             path = self.__tmp_file_final # os.path.join(self.__file_path, self.__tmp_file_name)
             self.__tmp_file_name_size = os.path.getsize(path)
@@ -296,6 +310,9 @@ class Download:
                                          self.__all_file_size)
 
         if percent > 100:
+            print self.__all_file_size
+            print already_download_size
+            print self.__tmp_file_name_size
             assert self.__url
             assert self.__file_name
             assert self.__file_path
@@ -329,7 +346,8 @@ class Download:
         self.set_all_info(url, file_name, file_path)
 
         if self.isFileDownloaded():
-            sys.stdout.write('%s already downloaded\n' % self.__file_name)
+            sys.stdout.write('Dir: %s ' % self.__file_path)
+            sys.stdout.write('File: %s already downloaded\n' % self.__file_name)
             sys.stdout.flush()
             return (self.__content_length, 0)
 
@@ -357,8 +375,8 @@ class Download:
 
         (all_size, all_size_unit) = \
                 self.tranform_file_size_and_unit(self.__all_file_size)
-        print('ID:%d File: %s [ %.2f %s ] \b                   ' % \
-              (id, self.__file_name, all_size, all_size_unit))
+        print('ID:%d Dir: %s\nFile: %s [ %.2f %s ] \b                   ' % \
+              (id, self.__file_path, self.__file_name, all_size, all_size_unit))
 
         tf = ''
         file_size_dl = 0
