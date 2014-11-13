@@ -100,6 +100,7 @@ class Anchor(object):
 
         start = 0
         length = 20
+        id = 1
         for i in range(5):
             for ep3 in self.resolve_audios_json(self.get_audios_json(fm_id, start, length)):
                 c = time.localtime(ep3['create_time']/1000)
@@ -111,7 +112,8 @@ class Anchor(object):
                 # print "Downloading " + create_time + name + '.mp3'
                 # self.store_mp3(create_time + name, 'mp3', ep3['url'])
                 download = Download()
-                download.download(ep3['url'], create_time+name+'.mp3', self.__final_path)
+                download.download(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
+                id += 1
                 time.sleep(5)
             start += length
             length += 20

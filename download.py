@@ -226,7 +226,8 @@ class Download:
             self.__requests_stream_object = requests.get(self.__url, 
                         stream=True, headers=self.__range_headers)
             self.__requests_ok = self.__requests_stream_object.ok
-            self.__content_length_request = self.__content_length - self.__tmp_file_name_size
+            self.__content_length_request = self.__requests_stream_object\
+                    .headers.get('Content-Length')
 
     def file_exists(self, file_path, file_name):
         assert file_path
@@ -313,6 +314,8 @@ class Download:
             print self.__all_file_size
             print already_download_size
             print self.__tmp_file_name_size
+            print self.__content_length_request
+            print self.__all_file_size - self.__tmp_file_name_size
             assert self.__url
             assert self.__file_name
             assert self.__file_path
@@ -346,7 +349,7 @@ class Download:
         self.set_all_info(url, file_name, file_path)
 
         if self.isFileDownloaded():
-            sys.stdout.write('Dir: %s ' % self.__file_path)
+            sys.stdout.write('ID: %d Dir: %s ' % (id, self.__file_path))
             sys.stdout.write('File: %s already downloaded\n' % self.__file_name)
             sys.stdout.flush()
             return (self.__content_length, 0)
@@ -380,8 +383,8 @@ class Download:
 
         tf = ''
         file_size_dl = 0
-        if self.__accept_range and self.__tmp_file_name_size:
-            file_size_dl = self.__tmp_file_name_size
+        #if self.__accept_range and self.__tmp_file_name_size:
+        #    file_size_dl = self.__tmp_file_name_size
         try:
             tf = open(self.__tmp_file_final, self.__open_file_mode)
             response = self.__requests_stream_object
