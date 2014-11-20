@@ -114,7 +114,7 @@ class Anchor(object):
                 download = Download()
                 download.download(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
                 id += 1
-                time.sleep(5)
+                # time.sleep(5)
             start += length
             length += 20
 

@@ -283,6 +283,7 @@ class Download:
                         logHandler.write('Set Requests Stream Object \
                                          Error: %s\n' % e)
                     time.sleep(random.randint(5, 15))
+                    times -= 1
                 
             self.__requests_ok = self.__requests_stream_object.ok
             self.__content_length_request = self.__content_length
