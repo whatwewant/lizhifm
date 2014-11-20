@@ -129,9 +129,9 @@ class Download:
         self.set_tmp_file_name_exists() # 9
         self.set_tmp_file_name_size() # 10
         self.set_range_headers() # 11
-        self.set_requests_stream_object() # 12
         self.set_all_file_size() # 
         self.set_file_modified() # 13 @TODO
+        self.set_requests_stream_object() # 12
 
     def isFileDownloaded(self):
         return self.__file_already_download
@@ -259,6 +259,11 @@ class Download:
 
     def set_requests_stream_object(self):
         assert self.__url
+
+        # if downloaded and not Modified, return
+        if self.__file_already_download:
+            return 
+
         if not self.__accept_range:
             times = 2
             # Try: if error, then try
