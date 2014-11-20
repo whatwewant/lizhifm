@@ -5,10 +5,13 @@ import sys
 import requests
 import os
 import time
+import random
 # import traceback
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
+
+VERSION = '1.0.0'
 
 class Download:
     '''
@@ -16,6 +19,10 @@ class Download:
     '''
     def __init__(self):
         self.__url = '' # 1
+        # test whether internet connection available
+        self.__internet_available = False
+        # if error. leave the class
+        self.__leave_now = False
         self.__file_path = '.' # 2default current dir, file store path
         self.__file_name = '' # file name
         self.__file_final = '' # Absolute path for a file
@@ -50,6 +57,10 @@ class Download:
 
     def reset(self):
         self.__url = '' # 1
+        # test whether internet connection available
+        self.__internet_available = False
+        # if error. leave the class
+        self.__leave_now = False
         self.__file_path = '.' # 2default current dir, file store path
         self.__file_name = '' # file name
         self.__file_final = '' # Absolute path for a file
@@ -83,12 +94,33 @@ class Download:
         self.__logfile_path = os.path.join\
                 (self.__logdir, self.__logfile)
 
+    #def set_internet_available(self):
+    #    assert self.__url
+    #    try:
+    #        req = requests.head(self.__url, timeout=10)
+    #        if req.ok:
+    #            self.__internet_available = True
+    #    except requests.ConnectionError:
+    #        print('No internet connection available')
+    #        self.__leave_now = True
+    #    except :
+    #        raise
+    #        sys.exit()
+
+    def do_leave_now(self):
+        return self.__leave_now
+
     def set_all_info(self, url, file_name, file_path):
         assert url
         assert file_name
         self.set_url(url) # 1
+        # self.set_internet_available()
         self.set_file_path_and_name(file_name, file_path) # 2
         self.set_server_response_header() # 3
+        # if internet is not available, leave
+        if self.do_leave_now():
+            return 
+
         self.set_accept_range() # 4
         self.set_open_file_mode() # 5
         self.set_content_length() # 6
@@ -113,8 +145,19 @@ class Download:
 
     def set_server_response_header(self):
         assert self.__url
-        self.__server_response_headers = requests.head(self.__url, \
-                                headers={'Range': 'bytes=0-'}).headers
+        try:
+            req = requests.head(self.__url, 
+                            headers={'Range': 'bytes=0-'},
+                            timeout=10)
+            if req.ok:
+                self.__internet_available = True
+                self.__server_response_headers = req.headers
+        except requests.ConnectionError:
+            print('No internet connection available')
+            self.__leave_now = True
+        except :
+            raise
+            sys.exit()
 
     def set_accept_range(self):
         assert self.__url
@@ -217,8 +260,25 @@ class Download:
     def set_requests_stream_object(self):
         assert self.__url
         if not self.__accept_range:
-            self.__requests_stream_object = requests.get(self.__url, 
-                        stream=True)
+            times = 2
+            # Try: if error, then try
+            while True:
+                if times <=0 :
+                    self.__leave_now = True
+                    return  
+
+                try:
+                    self.__requests_stream_object = \
+                            requests.get(self.__url, stream=True, \
+                                         timeout=20)
+                    break
+                except requests.exceptions.ConnectionError as e:
+                    print('An error occured: %s' % e)
+                    with open(self.__logfile, 'a') as logHandler:
+                        logHandler.write('Set Requests Stream Object \
+                                         Error: %s\n' % e)
+                    time.sleep(random.randint(5, 15))
+                
             self.__requests_ok = self.__requests_stream_object.ok
             self.__content_length_request = self.__content_length
         else:
@@ -348,6 +408,9 @@ class Download:
         self.reset()
         self.set_all_info(url, file_name, file_path)
 
+        if self.do_leave_now():
+            return (0, 0)
+
         if self.isFileDownloaded():
             sys.stdout.write('ID: %d Dir: %s ' % (id, self.__file_path))
             sys.stdout.write('File: %s already downloaded\n' % self.__file_name)
@@ -407,3 +470,70 @@ class Download:
 
         return (self.__all_file_size, file_size_dl)
 
+    @staticmethod
+    def usage(command):
+        print('NAME:')
+        print('  %s - The Download Class write by python.\n' % command)
+        print('DESCRIPTION:')
+        print('  %s is a Simple Download Class write by python depends \
+              on python-requests. Authored by Cole Smith.\n' % command)
+        print('USAGE:')
+        print('  %s -u URL -n NAME [ -p PATH | -i ID ]\n' % command)
+        print('OPTIONS:')
+        print('  -h, --help       Get help about usage and description.')
+        print('  -i, --id ID      Specify the download id you want.')
+        print('  -n, --name NAME  Specify the file name you want to be stored as. This field must not be None.')
+        print('  -p, --path PATH  Specify the filepath where you want to store the file.')
+        print('  -u,--url URL     Your download file\'s url.This field \
+              must not be None.')
+        print('  -v, --version    Get download class version.')
+
+if __name__ == '__main__':
+    import getopt
+
+    opts = ''
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            'hu:n:p:i:v:',
+            ['help', 'url', 'name', 'path', 'id', 'version']
+            )
+    except getopt.GetoptError:
+        # print('Get Opt Error')
+        sys.stdout.write('Get Opt Error\n')
+        sys.stdout.write('%s -h for help\n' % sys.argv[0])
+        sys.stdout.flush()
+        sys.exit(-1)
+    finally:
+        if opts == []:
+            Download.usage(sys.argv[0])
+            sys.exit()
+
+    url = None
+    name = None
+    path = None
+    id = 0
+    for o, a in opts:
+        if o in ('-h', '--help'):
+            Download.usage(sys.argv[0])
+            sys.exit()
+        if o in ('-v', '--version'):
+            sys.stdout.write('%s Version %s\n' % (sys.argv[0], VERSION))
+            sys.stdout.flush()
+            sys.exit()
+        if o in ('-u', '--url'):
+            url = a
+        if o in ('-n', '--name'):
+            name = a
+        if o in ('-p', '--path'):
+            path = a
+        if o in ('-i', '--id'):
+            id = int(a)
+
+    if url==None or name==None:
+        sys.stdout.write('url and file name must be specified\n')
+        sys.stdout.flush()
+        sys.exit()
+
+    OO = Download()
+    OO.download(url, name, path, id)
