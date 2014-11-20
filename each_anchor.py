@@ -4,7 +4,7 @@
 import requests
 import json
 # from bs4 import BeautifulSoup
-from download import Download
+from download import Download, MultiDownloadThread
 
 import sys
 reload(sys)
@@ -101,6 +101,7 @@ class Anchor(object):
         start = 0
         length = 20
         id = 1
+        threads = []
         for i in range(5):
             for ep3 in self.resolve_audios_json(self.get_audios_json(fm_id, start, length)):
                 c = time.localtime(ep3['create_time']/1000)
@@ -111,12 +112,24 @@ class Anchor(object):
                     #continue
                 # print "Downloading " + create_time + name + '.mp3'
                 # self.store_mp3(create_time + name, 'mp3', ep3['url'])
-                download = Download()
-                download.download(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
+                # download = Download()
+                # download.download(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
+                thread = MultiDownloadThread(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
+                threads.append(thread)
                 id += 1
                 # time.sleep(5)
             start += length
             length += 20
+
+        for thread in threads:
+            import threading
+            thread.start()
+            while len(threading.enumerate()) > 5:
+                time.sleep(1)
+
+        #for thread in threads:
+        #    thread.join()
+
 
 if __name__ == '__main__':
     import sys

@@ -7,11 +7,28 @@ import os
 import time
 import random
 # import traceback
+import threading
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 VERSION = '1.0.0'
+
+class MultiDownloadThread(threading.Thread):
+
+    def __init__(self, url, file_name, file_path, id):
+        super(MultiDownloadThread, self).__init__()
+        self.__url = url
+        self.__file_name = file_name
+        self.__file_path = file_path
+        self.__id = id
+
+    def run(self):
+        do = Download()
+        do.download(self.__url, 
+                    self.__file_name,
+                    self.__file_path,
+                    self.__id)
 
 class Download:
     '''
