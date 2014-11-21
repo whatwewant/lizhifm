@@ -259,6 +259,9 @@ class Download:
         elif self.__content_length > 1024:
             self.__file_size_unit = 'KB'
             self.__file_size = self.__content_length / float(1024)
+        else :
+            self.__file_size_unit = 'byte'
+            self.__file_size = self.__content_length / float(1024)
 
     def tranform_file_size_and_unit(self, file_size_dl):
         file_size = file_size_dl
@@ -337,8 +340,13 @@ class Download:
             print('File %s Doesnot Exist' % self.__file_name)
 
     def set_file_modified(self):
-        assert self.__content_length
-        assert self.__all_file_size
+        # assert self.__content_length
+        # assert self.__all_file_size
+        if not self.__all_file_size:
+            self.__file_modified = False
+            self.__file_already_download = True
+            return 
+
         if self.__file_name_exists:
             local_file_size = os.path.getsize(self.__file_final)
            # local_file_size = self.get_file_name_size()
@@ -376,13 +384,16 @@ class Download:
 
     def print_status(self, already_download_size, start_second, id=0):
         assert already_download_size
-        assert self.__content_length
+        # assert self.__content_length
         id = 0 if not id else id
+
+        if not self.__content_length:
+            return 0
 
         end_second = int(time.time())
         time_segment = end_second - start_second
         if time_segment <= 0:
-            return
+            return 0
 
         download_speed = already_download_size / float(time_segment)
         left_time = (self.__all_file_size - already_download_size - self.__tmp_file_name_size) / float(download_speed)
@@ -412,12 +423,17 @@ class Download:
         # ID:1 File: Hear.h [ 12.3MB ] [ 27% ] [ Speed: 123kb/s Left Time: 00:00:00]
         #status = 'ID:%d File: %s [ %.2f %s ] [ %3.2f%% ] [ Speed: %.2f %s left Time: %f ]' % \
         #            (id, self.__file_name, already_download, already_download_unit, percent, speed, speed_unit, left_time)
-        status = '%03.2f%s [%03.2f%%] [Speed:%03.2f%s/s Timeleft:%s]' % \
-                    (already_download, already_download_unit, percent, speed, speed_unit, left_time_str)
+        status = '%s%s [%s%% ] [Speed:%s%s/s Timeleft: %s]' % \
+                    (
+                        ('%03.2f' % already_download).rjust(7),
+                        already_download_unit,
+                        ('%03.2f' % percent).rjust(6),
+                        ('%03.2f' % speed).rjust(6),
+                        speed_unit,
+                        left_time_str,
+                    )
 
-        # status = status + chr(8)*(len(status)+1)
-        sys.stdout.write(status + ' \b      \r')
-        # sys.stdout.write(status + '\r')
+        sys.stdout.write(status.ljust(len(status)+3, ' ') + '\r')
         sys.stdout.flush()
         
 
@@ -475,14 +491,16 @@ class Download:
             tf = open(self.__tmp_file_final, self.__open_file_mode)
             response = self.__requests_stream_object
             start_second = int(time.time())
+            every_second = start_second
 
             for block in response.iter_content(8192):
                 if not block:
                     break
                 tf.write(block)
                 file_size_dl += len(block)
-                # if int(time.time() - start_second) % 2 == 0:
-                self.print_status(file_size_dl, start_second, id)
+                if time.time() >= every_second + 0.5:
+                    self.print_status(file_size_dl, start_second, id)
+                    every_second = time.time()
             tf.close()
         except :
             raise
