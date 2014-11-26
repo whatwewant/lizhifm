@@ -13,6 +13,12 @@ sys.setdefaultencoding('utf-8')
 class Anchor(object):
     '''每个主播的节目'''
     def __init__(self):
+        # html encoding
+        self.__decode_type = None
+        self.__encode_type = sys.getfilesystemencoding() if \
+                sys.getfilesystemencoding != 'mbcs' \
+                else 'gbk'
+
         self.__fm_id = int() #
         # main Page
         self.__url_home_of_anchor = "http://www.lizhi.fm/#/{fm_id}"
@@ -34,7 +40,12 @@ class Anchor(object):
         self.__req = requests.Session()
 
     def get_anchor_info_json(self, fm_id):
-        return json.loads(self.__req.get(self.__url_anchor_info.format(fm_id=fm_id, encoding='utf-8')).content)
+        resp = self.__req.get(self.__url_anchor_info\
+                              .format(fm_id=fm_id, encoding='utf-8'))
+        self.__decode_type = resp.encoding
+        return json.loads(resp.content\
+                          .decode(self.__decode_type)\
+                          .encode(self.__encode_type))
 
     def resolve_anchor_info_json(self, anchor_info_json):
         info = anchor_info_json
@@ -102,22 +113,19 @@ class Anchor(object):
         length = 20
         id = 1
         threads = []
+        ids = 0
         for i in range(5):
-            for ep3 in self.resolve_audios_json(self.get_audios_json(fm_id, start, length)):
+            ep3s = self.resolve_audios_json(self.get_audios_json(fm_id, start, length))
+            ids += len(ep3s)
+            for ep3 in ep3s:
                 c = time.localtime(ep3['create_time']/1000)
                 create_time = '%02d%02d%02d%s' % (c.tm_year, c.tm_mon, c.tm_mday, '-')
                 name = ep3['name'].replace('/', '+').replace(' ', '')
-                #if os.path.isfile(self.__final_path + '/' + create_time + name+ '.mp3'):
-                    #print name + '.mp3 已经存在' 
-                    #continue
-                # print "Downloading " + create_time + name + '.mp3'
-                # self.store_mp3(create_time + name, 'mp3', ep3['url'])
-                # download = Download()
-                # download.download(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
-                thread = MultiDownloadThread(ep3['url'], create_time+name+'.mp3', self.__final_path, id=id)
+                thread = MultiDownloadThread(ep3['url'], 
+                            create_time+name+'.mp3', 
+                            self.__final_path, id=id, ids=ids)
                 threads.append(thread)
                 id += 1
-                # time.sleep(5)
             start += length
             length += 20
 

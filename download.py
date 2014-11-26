@@ -8,6 +8,7 @@ import time
 import random
 # import traceback
 import threading
+import socket
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -16,19 +17,22 @@ VERSION = '1.0.0'
 
 class MultiDownloadThread(threading.Thread):
 
-    def __init__(self, url, file_name, file_path, id):
+    def __init__(self, url, file_name, file_path, id, ids=0):
         super(MultiDownloadThread, self).__init__()
         self.__url = url
         self.__file_name = file_name
         self.__file_path = file_path
         self.__id = id
+        self.__ids = ids
 
     def run(self):
         do = Download()
         do.download(self.__url, 
                     self.__file_name,
                     self.__file_path,
-                    self.__id)
+                    self.__id,
+                    self.__ids,
+                   )
 
 class Download:
     '''
@@ -399,9 +403,12 @@ class Download:
         left_time = (self.__all_file_size - already_download_size - self.__tmp_file_name_size) / float(download_speed)
         left_time_str = self.calculate_time(left_time)
 
-        (already_download, already_download_unit) = self.tranform_file_size_and_unit(already_download_size)
-        (speed, speed_unit) = self.tranform_file_size_and_unit(download_speed)
-        percent = self.calculate_percent(already_download_size + self.__tmp_file_name_size, 
+        (already_download, already_download_unit) = \
+                self.tranform_file_size_and_unit(already_download_size)
+        (speed, speed_unit) = \
+                self.tranform_file_size_and_unit(download_speed)
+        percent = self.calculate_percent(already_download_size + \
+                                         self.__tmp_file_name_size, 
                                          self.__all_file_size)
 
         if percent > 100:
@@ -437,10 +444,12 @@ class Download:
         sys.stdout.flush()
         
 
-    def download(self, url, file_name, file_path=None, id=0):
+    def download(self, url, file_name, file_path=None, id=0, ids=0):
         '''
             download main
         ''' 
+        if not ids and id:
+            ids = id
         # assert when url, file_name is None
         assert url
         assert file_name
@@ -451,8 +460,10 @@ class Download:
             return (0, 0)
 
         if self.isFileDownloaded():
-            sys.stdout.write('ID: %d Dir: %s ' % (id, self.__file_path))
-            sys.stdout.write('File: %s already downloaded\n' % self.__file_name)
+            sys.stdout.write('ID: [%d/%d] Dir: %s ' % 
+                             (id, ids, self.__file_path))
+            sys.stdout.write('File: %s already downloaded\n' % 
+                             self.__file_name)
             sys.stdout.flush()
             return (self.__content_length, 0)
 
@@ -480,8 +491,17 @@ class Download:
 
         (all_size, all_size_unit) = \
                 self.tranform_file_size_and_unit(self.__all_file_size)
-        print('ID:%d Dir: %s\nFile: %s [ %.2f %s ] \b                   ' % \
-              (id, self.__file_path, self.__file_name, all_size, all_size_unit))
+        dir_log = 'ID:[%d/%d] Dir: %s' % (
+                        id, ids, 
+                        self.__file_path.ljust(50),
+                    )
+        file_log = 'File: %s [ %.2f %s]' % ( 
+                        self.__file_name, 
+                        all_size,
+                        all_size_unit,
+                        )
+        print(dir_log.ljust(50))
+        print(file_log.ljust(50))
 
         tf = ''
         file_size_dl = 0
@@ -502,6 +522,10 @@ class Download:
                     self.print_status(file_size_dl, start_second, id)
                     every_second = time.time()
             tf.close()
+        except socket.timeout:
+            print('Error: socket.timeout')
+            tf.close()
+            return (self.__all_file_size, 0)
         except :
             raise
             tf.close()
