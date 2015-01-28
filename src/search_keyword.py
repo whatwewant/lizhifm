@@ -18,14 +18,14 @@ class ListRadio(object):
         # store data format
         # keyword page name band user_name
         if data_list == []:
-            print "no data found"
+            print("no data found")
             return
         for each in data_list:
             each_list = each.split(self.__data_split_char)
             name = each_list[2] + (40-len(each_list[2]))*' '
             band = each_list[3] + (10-len(each_list[3]))*' '
             user_name = each_list[4] + (25-len(each_list[4]))*' '
-            print '%40s %-10s %+25s' % (name, band, user_name)
+            print('%40s %-10s %+25s' % (name, band, user_name))
 
     def search(self, keyword):
         data_key = self.load_data_keyword()

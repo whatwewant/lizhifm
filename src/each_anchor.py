@@ -142,7 +142,7 @@ class Anchor(object):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2 :
-        print "Usage: " + sys.argv[0] + " fm_id"
+        print("Usage: " + sys.argv[0] + " fm_id")
         exit(0)
 
     for id in sys.argv:

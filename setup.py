@@ -27,11 +27,11 @@ except :
 
 setup(
     name = 'lizhifm',
-    version = '0.0.1',
+    version = '0.0.2',
     description = 'Would you like lizhi FM ? Now, Record it.',
     long_description = readme + history,
     author = 'Cole Smith',
-    author_eamil = 'uniquecolesmith@gmail.com',
+    author_email = 'uniquecolesmith@gmail.com',
     url = '',
     packages = ['lizhifm'],
     package_dir = {"lizhifm": "src"},
