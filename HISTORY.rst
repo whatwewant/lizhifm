@@ -1,6 +1,30 @@
 Project History: lizhifm 
 -----------------------
 
+#### 0.0.4 (2015-01-28) 
+----------------------------------------
+
+#### Behavioural Changes
+* replace `download` with `downloadhelper`
+
+#### Bugfixes
+* null
+
+#### 0.0.3 (2015-01-28) 
+----------------------------------------
+
+#### Behavioural Changes
+* null
+
+#### Bugfixes
+* requests_obj.content need decode requests_obj.encoding
+  ```python3
+    req.content.decode(req.encoding)
+    (Tips: Because Python3 auto unicode, so we need decode the raw material to unicode, Right ?)
+  ```
+* 
+
+  
 #### 0.0.2 (2015-01-28) 
 ----------------------------------------
 

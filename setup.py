@@ -27,7 +27,7 @@ except :
 
 setup(
     name = 'lizhifm',
-    version = '0.0.2',
+    version = '0.0.3',
     description = 'Would you like lizhi FM ? Now, Record it.',
     long_description = readme + history,
     author = 'Cole Smith',
@@ -36,7 +36,7 @@ setup(
     packages = ['lizhifm'],
     package_dir = {"lizhifm": "src"},
     include_package_data = True,
-    install_requires = ['requests'],
+    install_requires = ['requests', 'downloadhelper', ],
     license = "Apache 2.0",
     zip_safe = False,
     classifiers = ('Development Status :: 5 - Production/Stable', 'Intended Audience :: Developers', 'Natural Language :: English', 'License :: OSI Approved :: Apache Software License', 'Programming Language :: Python', 'Programming Language :: Python :: 2.6', 'Programming Language :: Python :: 2.7', 'Programming Language :: Python :: 3', 'Programming Language :: Python :: 3.3', 'Programming Language :: Python :: 3.4'),

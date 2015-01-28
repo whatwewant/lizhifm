@@ -6,9 +6,10 @@ from .each_anchor import Anchor
 from .search_keyword import ListRadio
 
 def usage(options=None):
+    print('%s options arg' % sys.argv[0].split('\\').pop())
     print("Usage: ")
-    print("\t" + sys.argv[0] + " -i fm_id")
-    print("\t" + sys.argv[0] + " -s keyword")
+    print("\t-i fm_id")
+    print("\t-s keyword")
 
 option_funcs = {
     '-i': 'download',
@@ -16,7 +17,7 @@ option_funcs = {
 }
 
 def main():
-    if len(sys.argv) != 2 :
+    if len(sys.argv) != 3 :
         usage()
         sys.exit(0)
 

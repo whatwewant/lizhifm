@@ -4,8 +4,12 @@
 import requests
 import json
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+
+try:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+except :
+    pass
 
 class ListRadio(object):
     '''搜索电台'''
@@ -47,7 +51,8 @@ class ListRadio(object):
         if page == None:
             page = 1
         url = self.__search_url.format(keyword=keyword, page=page)
-        return requests.get(url).content
+        req = requests.get(url)
+        return req.content.decode(req.encoding)
 
     def resolve_json_string(self, json_string):
         jsonObject = json.loads(json_string)

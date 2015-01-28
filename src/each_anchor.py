@@ -4,11 +4,14 @@
 import requests
 import json
 # from bs4 import BeautifulSoup
-from download import Download, MultiDownloadThread
+from downloadhelper import Download, MultiDownloadThread
 
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+try:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+except :
+    pass
 
 class Anchor(object):
     '''每个主播的节目'''
@@ -43,9 +46,12 @@ class Anchor(object):
         resp = self.__req.get(self.__url_anchor_info\
                               .format(fm_id=fm_id, encoding='utf-8'))
         self.__decode_type = resp.encoding
-        return json.loads(resp.content\
+        try:
+            return json.loads(resp.content\
                           .decode(self.__decode_type)\
                           .encode(self.__encode_type))
+        except TypeError:
+            return json.loads(resp.content.decode(resp.encoding))
 
     def resolve_anchor_info_json(self, anchor_info_json):
         info = anchor_info_json
@@ -70,7 +76,12 @@ class Anchor(object):
     def get_audios_json(self, fm_id, start, length):
         # get json : audios
         tmp_url = self.__url_audios_json.format(fm_id=fm_id,start=start,length=length)
-        return json.loads(self.__req.get(tmp_url).content)
+        resp = self.__req.get(tmp_url)
+        try:
+            content = json.loads(resp.content)
+        except TypeError:
+            content = json.loads(resp.content.decode(resp.encoding))
+        return content
 
     def resolve_audios_json(self, audios_json):
         # resolve json : audios
