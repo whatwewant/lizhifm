@@ -1,14 +1,23 @@
 Project History: lizhifm 
 -----------------------
 
+#### 0.0.5 (2015-02-02) 
+----------------------------------------
+#### Behavioural Changes
+* set default dir '$HOME/Music/LizhiFM'
+
+#### Bugfixes
+* os.makedirs
+
+
 #### 0.0.4 (2015-01-28) 
 ----------------------------------------
-
 #### Behavioural Changes
 * replace `download` with `downloadhelper`
 
 #### Bugfixes
 * null
+
 
 #### 0.0.3 (2015-01-28) 
 ----------------------------------------

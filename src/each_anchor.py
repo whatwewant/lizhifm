@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import requests
-import json
-# from bs4 import BeautifulSoup
-from downloadhelper import Download, MultiDownloadThread
-
 import sys
+import json
+import os
 try:
     reload(sys)
     sys.setdefaultencoding('utf-8')
 except :
+    pass
+
+# from bs4 import BeautifulSoup
+try:
+    from downloadhelper import Download, MultiDownloadThread
+    import requests
+except ImportError:
     pass
 
 class Anchor(object):
@@ -29,7 +33,9 @@ class Anchor(object):
         self.__url_anchor_info = "http://www.lizhi.fm/api/radio?band={fm_id}&flag=3"
         self.__anothor_info_json = ""
         # Anchor store mp3 dir path
-        self.__store_anochor_path = '.'
+        self.__home_dir = os.environ.get('HOME', '.')
+        self.__store_anochor_path = os.path.join(self.__home_dir, 
+                                                 'Music/LizhiFM')
         self.__store_anochor_dirname = ""
         self.__final_path = ""
 
@@ -60,18 +66,12 @@ class Anchor(object):
         return info
 
     def create_anchor_main_dir(self, path='.'):
-        import os
-        if path.endswith('/'):
-            self.__store_anochor_path = path
-        else:
-            self.__store_anochor_path = path + '/'
-
-        final_path = self.__store_anochor_path + self.__store_anochor_dirname
+        final_path = os.path.join(self.__store_anochor_path, 
+                                  self.__store_anochor_dirname)
         self.__final_path = final_path
 
         if not os.path.isdir(final_path):
-            os.mkdir(final_path)
-        # os.chdir(final_path)
+            os.makekdirs(final_path)
 
     def get_audios_json(self, fm_id, start, length):
         # get json : audios
@@ -116,7 +116,7 @@ class Anchor(object):
 
             
     def download_mp3(self, fm_id):
-        import time, os
+        import time
         self.resolve_anchor_info_json(self.get_anchor_info_json(fm_id))
         self.create_anchor_main_dir()
 
