@@ -71,7 +71,7 @@ class Anchor(object):
         self.__final_path = final_path
 
         if not os.path.isdir(final_path):
-            os.makekdirs(final_path)
+            os.makedirs(final_path)
 
     def get_audios_json(self, fm_id, start, length):
         # get json : audios
