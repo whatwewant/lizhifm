@@ -4,6 +4,7 @@
 import requests
 import json
 import sys
+from prettytable import PrettyTable
 
 try:
     reload(sys)
@@ -24,12 +25,16 @@ class ListRadio(object):
         if data_list == []:
             print("no data found")
             return
+        data_table = PrettyTable(['', 'Name', 'FMID', 'Author'])
         for each in data_list:
             each_list = each.split(self.__data_split_char)
-            name = each_list[2] + (40-len(each_list[2]))*' '
-            band = each_list[3] + (10-len(each_list[3]))*' '
-            user_name = each_list[4] + (25-len(each_list[4]))*' '
-            print('%40s %-10s %+25s' % (name, band, user_name))
+            name = each_list[2] #+ (40-len(each_list[2]))*' '
+            band = each_list[3] #+ (10-len(each_list[3]))*' '
+            user_name = each_list[4] #+ (25-len(each_list[4]))*' '
+            #print('%40s %-10s %+25s' % (name, band, user_name))
+            data_table.add_row([data_list.index(each)+1, 
+                                name, band, user_name])
+        print(data_table)
 
     def search(self, keyword):
         data_key = self.load_data_keyword()

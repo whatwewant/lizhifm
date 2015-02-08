@@ -1,6 +1,16 @@
 Project History: lizhifm 
 -----------------------
 
+#### 0.0.6 (2015-02-08) 
+----------------------------------------
+#### Behavioural Changes
+* + hot_anchor & good_anchor
+* depends on `prettytable`
+
+#### Bugfixes
+* null
+
+
 #### 0.0.5 (2015-02-02) 
 ----------------------------------------
 #### Behavioural Changes

@@ -3,3 +3,4 @@
 *.txt
 *dist
 *.egg*
+*build

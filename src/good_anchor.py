@@ -9,15 +9,15 @@ try:
 except :
     pass
 
-class HotAnchor:
-    URL = r'http://www.lizhi.fm/api/hot/{page}'
+class GoodAnchor:
+    URL = r'http://www.lizhi.fm/api/promo/{page}'
 
     def __init__(self):
         pass
 
     @classmethod
     def display_status(self, page=1):
-        url = HotAnchor.URL.format(page=page)
+        url = GoodAnchor.URL.format(page=page)
         jsonData = requests.get(url).json()
         title = jsonData.get('model')
 
@@ -44,4 +44,4 @@ class HotAnchor:
             page += 1
 
 if __name__ == '__main__':
-    HotAnchor.next_page()
+    GoodAnchor.next_page()
